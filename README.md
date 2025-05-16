@@ -14,7 +14,7 @@ Zawiera dane użytkownika: imię i nazwisko, nazwę, email, telefon, stronę, fi
 🔁 Błąd ładowania danych głównych
 W przypadku błędu połączenia, aplikacja wyświetla komunikat z przyciskiem "Spróbuj ponownie".
 
-<img src="\images\BladPost.gif" alt="Błąd ładowania postów" width="250">
+<img src="/images/BladPost.gif" alt="Błąd ładowania postów" width="250">
 🔁 Błąd szczegółów posta
 Wyświetlany, gdy nie uda się pobrać informacji o poście.
 
