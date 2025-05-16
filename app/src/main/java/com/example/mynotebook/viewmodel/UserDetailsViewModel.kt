@@ -33,14 +33,14 @@ class UserDetailsViewModel(
     private val _errorTodos = MutableStateFlow<String?>(null)
     val errorTodos: StateFlow<String?> = _errorTodos
 
-    fun fetchUser(userId: Int) {
+    fun fetchUser() {
         viewModelScope.launch {
             _isLoadingUser.value = true
             _errorUser.value = null
             try {
                 _users.value = userRepository.getUsers()
             } catch (e: Exception) {
-                _errorUser.value = "Błąd ładowania użytkownika: ${e.localizedMessage}"
+                _errorUser.value = "Nie udało się wczytać użytkownika"
             } finally {
                 _isLoadingUser.value = false
             }
@@ -54,7 +54,7 @@ class UserDetailsViewModel(
             try {
                 _todos.value = todoRepository.getTodosByUserId(userId)
             } catch (e: Exception) {
-                _errorTodos.value = "Błąd ładowania zadań: ${e.localizedMessage}"
+                _errorTodos.value = "Nie udało się wczytać zadań"
             } finally {
                 _isLoadingTodos.value = false
             }

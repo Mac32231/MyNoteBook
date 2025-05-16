@@ -34,12 +34,13 @@ class MainViewModel(
             try {
                 val posts = postRepository.getPosts()
                 val users = userRepository.getUsers()
+
                 _postState.value = UiState.Success(posts)
                 _userState.value = UiState.Success(users)
             } catch (e: Exception) {
-                val msg = e.message ?: "Nieznany błąd"
-                _postState.value = UiState.Error(msg)
-                _userState.value = UiState.Error(msg)
+                val errorMessage = "Błąd pobierania danych"
+                _postState.value = UiState.Error(errorMessage)
+                _userState.value = UiState.Error(errorMessage)
             }
         }
     }

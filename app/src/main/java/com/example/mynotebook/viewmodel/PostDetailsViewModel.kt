@@ -3,7 +3,6 @@ package com.example.mynotebook.viewmodel
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.example.mynotebook.network.Post
-import com.example.mynotebook.network.RetrofitClient
 import com.example.mynotebook.repository.PostRepository
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -33,7 +32,7 @@ class PostDetailsViewModel(
             try {
                 _posts.value = postRepository.getPosts()
             } catch (e: Exception) {
-                _errorMessage.value = "Błąd pobierania danych: ${e.localizedMessage}"
+                _errorMessage.value = "Nie udało się wczytać szczegółów posta"
             } finally {
                 _isLoading.value = false
             }

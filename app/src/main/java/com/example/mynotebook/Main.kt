@@ -156,7 +156,7 @@ fun MainScreen(
 
                 Box(Modifier.fillMaxSize().padding(padding), contentAlignment = Alignment.Center) {
                     Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                        Text("Błąd: $message")
+                        Text(message)
                         Spacer(modifier = Modifier.height(8.dp))
                         Button(onClick = { viewModel.fetchData() }) {
                             Text("Spróbuj ponownie")
@@ -223,7 +223,7 @@ fun PostDetailsScreen(
     val errorMessage by viewModel.errorMessage.collectAsState()
     val post = posts.find { it.id == postId }
 
-    // Pobierz dane jeśli lista jest pusta
+
     LaunchedEffect(Unit) {
         if (posts.isEmpty()) {
             viewModel.fetchAllPosts()
@@ -280,7 +280,10 @@ fun PostDetailsScreen(
                         style = MaterialTheme.typography.titleMedium,
                         fontWeight = FontWeight.Bold
                     )
-                    Text(text = post.title, style = MaterialTheme.typography.bodyLarge)
+                    Text(
+                        text = post.title,
+                        style = MaterialTheme.typography.titleLarge
+                    )
 
                     Spacer(modifier = Modifier.height(16.dp))
 
@@ -289,7 +292,14 @@ fun PostDetailsScreen(
                         style = MaterialTheme.typography.titleMedium,
                         fontWeight = FontWeight.Bold
                     )
-                    Text(text = post.body, style = MaterialTheme.typography.bodyLarge)
+                    Text(
+                        text = post.body,
+                        style = MaterialTheme.typography.bodyLarge
+                    )
+
+                    Spacer(modifier = Modifier.height(24.dp))
+
+                    Divider()
 
                     Spacer(modifier = Modifier.height(16.dp))
 
@@ -331,7 +341,7 @@ fun UserDetailsScreen(
     val userTodos = todos.filter { it.userId == userId }
 
     LaunchedEffect(userId) {
-        viewModel.fetchUser(userId)
+        viewModel.fetchUser()
         viewModel.fetchTodos(userId)
     }
 
@@ -369,7 +379,7 @@ fun UserDetailsScreen(
                         }
                         Spacer(modifier = Modifier.height(8.dp))
                         Button(onClick = {
-                            viewModel.fetchUser(userId)
+                            viewModel.fetchUser()
                             viewModel.fetchTodos(userId)
                         }) {
                             Text("Spróbuj ponownie")
@@ -386,24 +396,50 @@ fun UserDetailsScreen(
                         .fillMaxSize()
                 ) {
                     item {
-                        Text("Imię i nazwisko: ${user.name}", style = MaterialTheme.typography.bodyLarge)
-                        Text("Nazwa użytkownika: ${user.username}", style = MaterialTheme.typography.bodyLarge)
-                        Text("Email: ${user.email}", style = MaterialTheme.typography.bodyLarge)
-                        Text("Telefon: ${user.phone}", style = MaterialTheme.typography.bodyLarge)
-                        Text("Strona: ${user.website}", style = MaterialTheme.typography.bodyLarge)
+                        Text("Imię i nazwisko:", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
+                        Text(user.name, style = MaterialTheme.typography.titleLarge)
 
                         Spacer(modifier = Modifier.height(8.dp))
 
-                        Text("Firma: ${user.company?.name ?: "Brak danych"}", style = MaterialTheme.typography.bodyLarge)
+                        Text("Nazwa użytkownika:", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
+                        Text(user.username, style = MaterialTheme.typography.titleLarge)
+
+                        Spacer(modifier = Modifier.height(8.dp))
+
+                        Text("Email:", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
+                        Text(user.email, style = MaterialTheme.typography.titleLarge)
+
+                        Spacer(modifier = Modifier.height(8.dp))
+
+                        Text("Telefon:", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
+                        Text(user.phone, style = MaterialTheme.typography.titleLarge)
+
+                        Spacer(modifier = Modifier.height(8.dp))
+
+                        Text("Strona:", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
+                        Text(user.website, style = MaterialTheme.typography.titleLarge)
+
+                        Spacer(modifier = Modifier.height(8.dp))
+
+                        Text("Firma:", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
+                        Text(user.company?.name ?: "Brak danych", style = MaterialTheme.typography.titleLarge)
+
+                        Spacer(modifier = Modifier.height(8.dp))
+
+                        Text("Adres:", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
                         Text(
-                            "Adres: ${user.address?.street ?: ""} ${user.address?.suite ?: ""}, " +
+                            "${user.address?.street ?: ""} ${user.address?.suite ?: ""}, " +
                                     "${user.address?.city ?: ""}, ${user.address?.zipcode ?: ""}",
-                            style = MaterialTheme.typography.bodyLarge
+                            style = MaterialTheme.typography.titleLarge
                         )
 
                         Spacer(modifier = Modifier.height(16.dp))
 
-                        Text("Lista zadań:", style = MaterialTheme.typography.titleMedium)
+                        Divider(thickness = 2.dp)
+
+                        Spacer(modifier = Modifier.height(16.dp))
+
+                        Text("Lista zadań:", style = MaterialTheme.typography.headlineSmall)
                         Spacer(modifier = Modifier.height(8.dp))
                     }
 
@@ -419,7 +455,7 @@ fun UserDetailsScreen(
                                 onCheckedChange = null
                             )
                             Spacer(modifier = Modifier.width(8.dp))
-                            Text(todo.title)
+                            Text(todo.title, style = MaterialTheme.typography.bodyLarge)
                         }
                         Divider()
                     }
