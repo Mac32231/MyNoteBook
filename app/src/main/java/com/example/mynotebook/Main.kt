@@ -58,6 +58,7 @@ fun AppNavGraph(navController: NavHostController, darkThemeViewModel: DarkThemeV
         composable("main") {
             MainScreen(
                 navController = navController,
+                darkThemeViewModel = darkThemeViewModel,
                 onPostClick = { postId -> navController.navigate("postDetails/$postId") },
                 onUserClick = { userId -> navController.navigate("userDetails/$userId") }
             )
@@ -67,7 +68,7 @@ fun AppNavGraph(navController: NavHostController, darkThemeViewModel: DarkThemeV
             val postId = backStackEntry.arguments?.getString("postId")?.toIntOrNull()
             postId?.let {
                 val viewModel: PostDetailsViewModel = viewModel(backStackEntry)
-                PostDetailsScreen(postId = it, navController = navController, viewModel = viewModel)
+                PostDetailsScreen(postId = it, navController = navController, viewModel = viewModel, darkThemeViewModel = darkThemeViewModel)
             }
         }
 
@@ -75,12 +76,12 @@ fun AppNavGraph(navController: NavHostController, darkThemeViewModel: DarkThemeV
             val userId = backStackEntry.arguments?.getString("userId")?.toIntOrNull()
             userId?.let {
                 val viewModel: UserDetailsViewModel = viewModel(backStackEntry)
-                UserDetailsScreen(userId = it, navController = navController, viewModel = viewModel)
+                UserDetailsScreen(userId = it, navController = navController, viewModel = viewModel, darkThemeViewModel = darkThemeViewModel)
             }
         }
         composable("yourDetails") {
             val viewModel: ProfileViewModel = viewModel()
-            YourDetailsScreen(navController = navController, viewModel = viewModel)
+            YourDetailsScreen(navController = navController, viewModel = viewModel, darkThemeViewModel = darkThemeViewModel)
 
 
         }
@@ -94,11 +95,14 @@ fun AppBar(
     showBack: Boolean = false,
     showSettings: Boolean = false,
     showProfile: Boolean = false,
-    showThemeToggle: Boolean = false
+    showThemeToggle: Boolean = false,
+    darkThemeViewModel: DarkThemeViewModel
 ) {
+    val isDark by darkThemeViewModel.isDarkTheme.collectAsState()
+
 
     Surface(
-        color = Color(0xFFFEF7FF),
+        color = MaterialTheme.colorScheme.primary,
         shadowElevation = 4.dp,
         modifier = Modifier
             .fillMaxWidth()
@@ -111,71 +115,73 @@ fun AppBar(
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.SpaceBetween
         ) {
-            if (showBack) {
-                IconButton(onClick = { navController.popBackStack() }) {
-                    Icon(
-                        Icons.Filled.ArrowBack,
-                        contentDescription = "Cofnij",
-                        tint = Color.Black,
-                        modifier = Modifier.size(26.dp)
-                    )
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                // 🌙 Ikonka motywu – NA LEWO
+                if (showBack) {
+                    IconButton(onClick = { navController.popBackStack() }) {
+                        Icon(
+                            Icons.Filled.ArrowBack,
+                            contentDescription = "Cofnij",
+                            tint = MaterialTheme.colorScheme.onPrimary
+                        )
+                    }
                 }
-            } else if (showSettings) {
-                IconButton(onClick = { navController.navigate("settings") }) {
+             else if (showSettings) {
+            IconButton(onClick = { navController.navigate("settings") }) {
+                Icon(
+                    Icons.Filled.Settings,
+                    contentDescription = "Ustawienia",
+                    tint = MaterialTheme.colorScheme.onPrimary
+                )
+            }
+        }
+
+                if (showThemeToggle) {
+                    IconButton(onClick = { darkThemeViewModel.toggleTheme() }) {
+                        Icon(
+                            imageVector = if (isDark) Icons.Filled.LightMode else Icons.Filled.DarkMode,
+                            contentDescription = "Przełącz motyw",
+                            tint = Color.White,
+                            modifier = Modifier.size(26.dp)
+                        )
+                    }
+                }
+            }
+
+
+
+            // Tytuł
+            Text(
+                text = title,
+                fontSize = 20.sp,
+                fontWeight = FontWeight.Medium,
+                color = MaterialTheme.colorScheme.onPrimary
+            )
+
+            // Prawa strona – np. profil
+            if (showProfile) {
+                IconButton(onClick = { navController.navigate("yourDetails") }) {
                     Icon(
-                        Icons.Filled.Settings,
-                        contentDescription = "Ustawienia",
-                        tint = Color.Black,
-                        modifier = Modifier.size(26.dp)
+                        Icons.Filled.Person,
+                        contentDescription = "Profil",
+                        tint = MaterialTheme.colorScheme.onPrimary
                     )
                 }
             } else {
                 Spacer(modifier = Modifier.width(48.dp))
             }
-
-            Text(
-                text = title,
-                fontSize = 20.sp,
-                fontWeight = FontWeight.Medium,
-                color = Color.Black
-            )
-            val darkThemeViewModel: DarkThemeViewModel = viewModel()
-            val isDark by darkThemeViewModel.isDarkTheme.collectAsState()
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                if (showThemeToggle) {
-                    IconButton(onClick = { darkThemeViewModel.toggleTheme() }) {
-                        Icon(
-                            imageVector = if (isDark) Icons.Filled.LightMode else Icons.Filled.DarkMode, // lub inna ikona księżyca
-                            contentDescription = "Przełącz motyw",
-                            tint = Color.Black,
-                            modifier = Modifier.size(26.dp)
-                        )
-                    }
-                }
-
-                if (showProfile) {
-                    IconButton(onClick = { navController.navigate("yourDetails") }) {
-                        Icon(
-                            Icons.Filled.Person,
-                            contentDescription = "Profil",
-                            tint = Color.Black,
-                            modifier = Modifier.size(26.dp)
-                        )
-                    }
-                } else {
-                    Spacer(modifier = Modifier.width(48.dp))
-                }
-            }
         }
     }
 }
+
 
 @Composable
 fun MainScreen(
     navController: NavController,
     viewModel: MainViewModel = viewModel(),
     onPostClick: (Int) -> Unit,
-    onUserClick: (Int) -> Unit
+    onUserClick: (Int) -> Unit,
+    darkThemeViewModel: DarkThemeViewModel
 )
 {
     val postState by viewModel.postState.collectAsState()
@@ -184,7 +190,7 @@ fun MainScreen(
 
     Scaffold(
         topBar = {
-            AppBar(title = "Lista Postów", navController = navController, showProfile = true)
+            AppBar(title = "Lista Postów", navController = navController, showProfile = true, darkThemeViewModel = darkThemeViewModel, showThemeToggle = true)
         }
     ) { padding ->
 
@@ -262,7 +268,8 @@ fun PostItem(
 fun PostDetailsScreen(
     postId: Int,
     navController: NavController,
-    viewModel: PostDetailsViewModel = viewModel()
+    viewModel: PostDetailsViewModel = viewModel(),
+    darkThemeViewModel: DarkThemeViewModel
 ) {
     val posts by viewModel.posts.collectAsState()
     val isLoading by viewModel.isLoading.collectAsState()
@@ -282,6 +289,8 @@ fun PostDetailsScreen(
                 title = "Szczegóły Posta",
                 navController = navController,
                 showBack = true,
+                darkThemeViewModel = darkThemeViewModel,
+                showThemeToggle = true
             )
         }
     ) { padding ->
@@ -371,8 +380,11 @@ fun PostDetailsScreen(
     }
 }
 @Composable
-fun YourDetailsScreen(navController: NavController, viewModel: ProfileViewModel = viewModel()) {
-
+fun YourDetailsScreen(
+    navController: NavController,
+    viewModel: ProfileViewModel = viewModel(),
+    darkThemeViewModel: DarkThemeViewModel
+) {
     val currentName by viewModel.name.collectAsState()
     val currentSurname by viewModel.surname.collectAsState()
     val currentPhotoPath by viewModel.photoPath.collectAsState()
@@ -383,15 +395,19 @@ fun YourDetailsScreen(navController: NavController, viewModel: ProfileViewModel 
     val surname = remember { mutableStateOf("") }
     val selectedImageUri = remember { mutableStateOf<Uri?>(null) }
 
+    // Parsowanie zapisanego ścieżki String do Uri
     LaunchedEffect(currentName, currentSurname, currentPhotoPath) {
         name.value = currentName
         surname.value = currentSurname
-        selectedImageUri.value = if (currentPhotoPath.isNotBlank()) Uri.parse(currentPhotoPath) else null
+        selectedImageUri.value =
+            if (currentPhotoPath.isNotBlank()) Uri.parse(currentPhotoPath) else null
     }
 
     val launcher = rememberLauncherForActivityResult(ActivityResultContracts.GetContent()) { uri ->
         Log.d("ImagePicker", "Selected URI: $uri")
-        if (uri != null) selectedImageUri.value = uri
+        if (uri != null) {
+            selectedImageUri.value = uri
+        }
     }
 
     Scaffold(
@@ -400,6 +416,8 @@ fun YourDetailsScreen(navController: NavController, viewModel: ProfileViewModel 
                 title = if (isEditing) "Edytuj swoje dane" else "Twoje Dane",
                 navController = navController,
                 showBack = true,
+                darkThemeViewModel = darkThemeViewModel,
+                showThemeToggle = true
             )
         }
     ) { padding ->
@@ -419,21 +437,12 @@ fun YourDetailsScreen(navController: NavController, viewModel: ProfileViewModel 
                     .clickable(enabled = isEditing) { launcher.launch("image/*") },
                 contentAlignment = Alignment.Center
             ) {
-                if (selectedImageUri.value != null) {
-                    LoadImageFromUri(
-                        uri = selectedImageUri.value,
-                        modifier = Modifier
-                            .fillMaxSize()
-                            .clip(CircleShape)
-                    )
-                } else {
-                    Icon(
-                        imageVector = Icons.Default.Person,
-                        contentDescription = "Domyślny profil",
-                        modifier = Modifier.size(64.dp),
-                        tint = Color.Gray
-                    )
-                }
+                LoadImageFromUri(
+                    uri = selectedImageUri.value,
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .clip(CircleShape)
+                )
             }
 
             if (isEditing) {
@@ -460,7 +469,8 @@ fun YourDetailsScreen(navController: NavController, viewModel: ProfileViewModel 
                     TextButton(onClick = {
                         name.value = currentName
                         surname.value = currentSurname
-                        selectedImageUri.value = if (currentPhotoPath.isNotBlank()) Uri.parse(currentPhotoPath) else null
+                        selectedImageUri.value =
+                            if (currentPhotoPath.isNotBlank()) Uri.parse(currentPhotoPath) else null
                         isEditing = false
                     }) {
                         Text("Anuluj")
@@ -480,8 +490,14 @@ fun YourDetailsScreen(navController: NavController, viewModel: ProfileViewModel 
                     }
                 }
             } else {
-                Text("Imię: ${currentName.ifBlank { "-" }}", style = MaterialTheme.typography.titleMedium)
-                Text("Nazwisko: ${currentSurname.ifBlank { "-" }}", style = MaterialTheme.typography.titleMedium)
+                Text(
+                    "Imię: ${currentName.ifBlank { "-" }}",
+                    style = MaterialTheme.typography.titleMedium
+                )
+                Text(
+                    "Nazwisko: ${currentSurname.ifBlank { "-" }}",
+                    style = MaterialTheme.typography.titleMedium
+                )
 
                 Spacer(modifier = Modifier.weight(1f))
 
@@ -532,7 +548,8 @@ fun LoadImageFromUri(uri: Uri?, modifier: Modifier = Modifier) {
 fun UserDetailsScreen(
     userId: Int,
     navController: NavController,
-    viewModel: UserDetailsViewModel = viewModel()
+    viewModel: UserDetailsViewModel = viewModel(),
+    darkThemeViewModel: DarkThemeViewModel
 ) {
     val users by viewModel.users.collectAsState()
     val todos by viewModel.todos.collectAsState()
@@ -550,7 +567,7 @@ fun UserDetailsScreen(
 
     Scaffold(
         topBar = {
-            AppBar(title = "Szczegóły Użytkownika", navController = navController, showBack = true)
+            AppBar(title = "Szczegóły Użytkownika", navController = navController, showBack = true, darkThemeViewModel = darkThemeViewModel, showThemeToggle = true)
         }
     ) { padding ->
         when {
