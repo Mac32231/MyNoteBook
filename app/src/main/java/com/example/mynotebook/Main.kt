@@ -1,5 +1,9 @@
 package com.example.mynotebook
 
+import android.graphics.Bitmap
+import android.graphics.BitmapFactory
+import android.net.Uri
+import android.util.Log
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
@@ -10,14 +14,11 @@ import androidx.compose.material.icons.filled.Person
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
-import androidx.compose.ui.Alignment
-import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
-import androidx.navigation.NavController
 import androidx.navigation.NavHostController
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
@@ -26,11 +27,33 @@ import com.example.mynotebook.network.User
 import com.example.mynotebook.viewmodel.MainViewModel
 import com.example.mynotebook.viewmodel.PostDetailsViewModel
 import com.example.mynotebook.viewmodel.UserDetailsViewModel
+import com.example.mynotebook.viewmodel.ProfileViewModel
 import com.example.mynotebook.network.UiState
+import com.google.maps.android.compose.*
+import com.google.android.gms.maps.model.CameraPosition
+import com.google.android.gms.maps.model.LatLng
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.foundation.Image
+import androidx.compose.foundation.background
+import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.asImageBitmap
+import androidx.compose.ui.layout.ContentScale
+import androidx.navigation.NavController
+import androidx.compose.ui.platform.LocalContext
+import com.example.mynotebook.viewmodel.DarkThemeViewModel
+import androidx.compose.material.icons.filled.DarkMode
+import androidx.compose.material.icons.filled.LightMode
+
+
+
 
 @Composable
-fun AppNavGraph(navController: NavHostController) {
-    NavHost(navController = navController, startDestination = "main") {
+fun AppNavGraph(navController: NavHostController, darkThemeViewModel: DarkThemeViewModel) {
+    NavHost(navController = navController, startDestination = "main",) {
 
         composable("main") {
             MainScreen(
@@ -55,6 +78,12 @@ fun AppNavGraph(navController: NavHostController) {
                 UserDetailsScreen(userId = it, navController = navController, viewModel = viewModel)
             }
         }
+        composable("yourDetails") {
+            val viewModel: ProfileViewModel = viewModel()
+            YourDetailsScreen(navController = navController, viewModel = viewModel)
+
+
+        }
     }
 }
 
@@ -64,8 +93,10 @@ fun AppBar(
     navController: NavController,
     showBack: Boolean = false,
     showSettings: Boolean = false,
-    showProfile: Boolean = false
+    showProfile: Boolean = false,
+    showThemeToggle: Boolean = false
 ) {
+
     Surface(
         color = Color(0xFFFEF7FF),
         shadowElevation = 4.dp,
@@ -108,18 +139,32 @@ fun AppBar(
                 fontWeight = FontWeight.Medium,
                 color = Color.Black
             )
-
-            if (showProfile) {
-                IconButton(onClick = { navController.navigate("profile") }) {
-                    Icon(
-                        Icons.Filled.Person,
-                        contentDescription = "Profil",
-                        tint = Color.Black,
-                        modifier = Modifier.size(26.dp)
-                    )
+            val darkThemeViewModel: DarkThemeViewModel = viewModel()
+            val isDark by darkThemeViewModel.isDarkTheme.collectAsState()
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                if (showThemeToggle) {
+                    IconButton(onClick = { darkThemeViewModel.toggleTheme() }) {
+                        Icon(
+                            imageVector = if (isDark) Icons.Filled.LightMode else Icons.Filled.DarkMode, // lub inna ikona księżyca
+                            contentDescription = "Przełącz motyw",
+                            tint = Color.Black,
+                            modifier = Modifier.size(26.dp)
+                        )
+                    }
                 }
-            } else {
-                Spacer(modifier = Modifier.width(48.dp))
+
+                if (showProfile) {
+                    IconButton(onClick = { navController.navigate("yourDetails") }) {
+                        Icon(
+                            Icons.Filled.Person,
+                            contentDescription = "Profil",
+                            tint = Color.Black,
+                            modifier = Modifier.size(26.dp)
+                        )
+                    }
+                } else {
+                    Spacer(modifier = Modifier.width(48.dp))
+                }
             }
         }
     }
@@ -132,13 +177,14 @@ fun MainScreen(
     onPostClick: (Int) -> Unit,
     onUserClick: (Int) -> Unit
 )
- {
+{
     val postState by viewModel.postState.collectAsState()
     val userState by viewModel.userState.collectAsState()
 
+
     Scaffold(
         topBar = {
-            AppBar(title = "Lista Postów", navController = navController)
+            AppBar(title = "Lista Postów", navController = navController, showProfile = true)
         }
     ) { padding ->
 
@@ -174,7 +220,7 @@ fun MainScreen(
                         .fillMaxSize()
                         .padding(padding)
                 ) {
-                    items(posts) { post ->
+                    items(posts , key = { it.id }) { post ->
                         val user = users.find { it.id == post.userId }
                         PostItem(post, user,
                             onPostClick = { onPostClick(post.id) },
@@ -235,7 +281,7 @@ fun PostDetailsScreen(
             AppBar(
                 title = "Szczegóły Posta",
                 navController = navController,
-                showBack = true
+                showBack = true,
             )
         }
     ) { padding ->
@@ -322,6 +368,163 @@ fun PostDetailsScreen(
                 }
             }
         }
+    }
+}
+@Composable
+fun YourDetailsScreen(navController: NavController, viewModel: ProfileViewModel = viewModel()) {
+
+    val currentName by viewModel.name.collectAsState()
+    val currentSurname by viewModel.surname.collectAsState()
+    val currentPhotoPath by viewModel.photoPath.collectAsState()
+
+    var isEditing by remember { mutableStateOf(false) }
+
+    val name = remember { mutableStateOf("") }
+    val surname = remember { mutableStateOf("") }
+    val selectedImageUri = remember { mutableStateOf<Uri?>(null) }
+
+    LaunchedEffect(currentName, currentSurname, currentPhotoPath) {
+        name.value = currentName
+        surname.value = currentSurname
+        selectedImageUri.value = if (currentPhotoPath.isNotBlank()) Uri.parse(currentPhotoPath) else null
+    }
+
+    val launcher = rememberLauncherForActivityResult(ActivityResultContracts.GetContent()) { uri ->
+        Log.d("ImagePicker", "Selected URI: $uri")
+        if (uri != null) selectedImageUri.value = uri
+    }
+
+    Scaffold(
+        topBar = {
+            AppBar(
+                title = if (isEditing) "Edytuj swoje dane" else "Twoje Dane",
+                navController = navController,
+                showBack = true,
+            )
+        }
+    ) { padding ->
+        Column(
+            modifier = Modifier
+                .padding(padding)
+                .padding(16.dp)
+                .fillMaxSize(),
+            verticalArrangement = Arrangement.spacedBy(12.dp),
+            horizontalAlignment = Alignment.CenterHorizontally
+        ) {
+            Box(
+                modifier = Modifier
+                    .size(128.dp)
+                    .clip(CircleShape)
+                    .background(Color.Gray.copy(alpha = 0.2f))
+                    .clickable(enabled = isEditing) { launcher.launch("image/*") },
+                contentAlignment = Alignment.Center
+            ) {
+                if (selectedImageUri.value != null) {
+                    LoadImageFromUri(
+                        uri = selectedImageUri.value,
+                        modifier = Modifier
+                            .fillMaxSize()
+                            .clip(CircleShape)
+                    )
+                } else {
+                    Icon(
+                        imageVector = Icons.Default.Person,
+                        contentDescription = "Domyślny profil",
+                        modifier = Modifier.size(64.dp),
+                        tint = Color.Gray
+                    )
+                }
+            }
+
+            if (isEditing) {
+                OutlinedTextField(
+                    value = name.value,
+                    onValueChange = { name.value = it },
+                    label = { Text("Imię") },
+                    modifier = Modifier.fillMaxWidth()
+                )
+
+                OutlinedTextField(
+                    value = surname.value,
+                    onValueChange = { surname.value = it },
+                    label = { Text("Nazwisko") },
+                    modifier = Modifier.fillMaxWidth()
+                )
+
+                Spacer(modifier = Modifier.height(24.dp))
+
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.End
+                ) {
+                    TextButton(onClick = {
+                        name.value = currentName
+                        surname.value = currentSurname
+                        selectedImageUri.value = if (currentPhotoPath.isNotBlank()) Uri.parse(currentPhotoPath) else null
+                        isEditing = false
+                    }) {
+                        Text("Anuluj")
+                    }
+
+                    Spacer(modifier = Modifier.width(16.dp))
+
+                    Button(onClick = {
+                        viewModel.saveData(
+                            name.value,
+                            surname.value,
+                            selectedImageUri.value?.toString() ?: ""
+                        )
+                        isEditing = false
+                    }) {
+                        Text("Zapisz")
+                    }
+                }
+            } else {
+                Text("Imię: ${currentName.ifBlank { "-" }}", style = MaterialTheme.typography.titleMedium)
+                Text("Nazwisko: ${currentSurname.ifBlank { "-" }}", style = MaterialTheme.typography.titleMedium)
+
+                Spacer(modifier = Modifier.weight(1f))
+
+                Button(onClick = { isEditing = true }) {
+                    Text("Edytuj")
+                }
+            }
+        }
+    }
+}
+
+@Composable
+fun LoadImageFromUri(uri: Uri?, modifier: Modifier = Modifier) {
+    val context = LocalContext.current
+
+    var bitmap by remember { mutableStateOf<Bitmap?>(null) }
+
+    LaunchedEffect(uri) {
+        if (uri != null) {
+            try {
+                context.contentResolver.openInputStream(uri)?.use { stream ->
+                    bitmap = BitmapFactory.decodeStream(stream)
+                }
+            } catch (e: Exception) {
+                Log.e("ImageLoad", "Błąd ładowania obrazu: ${e.message}")
+            }
+        }
+    }
+
+    if (bitmap != null) {
+        Image(
+            bitmap = bitmap!!.asImageBitmap(),
+            contentDescription = "Zdjęcie profilowe",
+            modifier = modifier,
+            contentScale = ContentScale.Crop
+        )
+    } else {
+        Icon(
+            imageVector = Icons.Default.Person,
+            contentDescription = "Domyślny profil",
+            modifier = Modifier.size(64.dp),
+            tint = Color.Gray
+        )
     }
 }
 
@@ -433,7 +636,52 @@ fun UserDetailsScreen(
                             style = MaterialTheme.typography.titleLarge
                         )
 
-                        Spacer(modifier = Modifier.height(16.dp))
+                        Spacer(modifier = Modifier.height(8.dp))
+
+                        // Mapa
+                        user.address?.geo?.let { geo ->
+                            val lat = geo.lat.toDoubleOrNull()
+                            val lng = geo.lng.toDoubleOrNull()
+                            Log.d("MAPA", "lat=$lat, lng=$lng")
+
+                            if (lat != null && lng != null) {
+                                val location = LatLng(lat, lng)
+                                val cameraPositionState = rememberCameraPositionState()
+                                LaunchedEffect(user) {
+                                    user?.address?.geo?.let { geo ->
+                                        val lat = geo.lat.toDoubleOrNull()
+                                        val lng = geo.lng.toDoubleOrNull()
+                                        if (lat != null && lng != null) {
+                                            cameraPositionState.position = CameraPosition.fromLatLngZoom(LatLng(lat, lng), 12f)
+                                        }
+                                    }
+                                }
+
+                                Spacer(modifier = Modifier.height(8.dp))
+
+                                GoogleMap(
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .height(400.dp),
+                                    cameraPositionState = cameraPositionState,
+                                    properties = MapProperties(
+                                        minZoomPreference = 1f,
+                                        maxZoomPreference = 10f
+                                    ),
+                                    uiSettings = MapUiSettings(
+                                        zoomControlsEnabled = true,
+                                        zoomGesturesEnabled = true
+                                ) ){
+                                    Marker(
+                                        state = MarkerState(position = location),
+                                        title = user.name,
+                                        snippet = "Tutaj mieszka"
+                                    )
+                                }
+
+                                Spacer(modifier = Modifier.height(16.dp))
+                            }
+                        }
 
                         Divider(thickness = 2.dp)
 
@@ -475,3 +723,5 @@ fun UserDetailsScreen(
         }
     }
 }
+
+

@@ -83,4 +83,14 @@ dependencies {
     testImplementation(libs.junit)
     androidTestImplementation(libs.androidx.junit)
     androidTestImplementation(libs.androidx.espresso.core)
+
+    implementation (libs.accompanist.permissions)
+    implementation (libs.androidx.runtime)
+    implementation(libs.androidx.datastore.preferences)
+    implementation(libs.androidx.lifecycle.runtime.ktx.v262)
+    implementation(libs.coil.compose)
+    implementation (libs.play.services.maps.v1820)
+    implementation (libs.maps.compose.v2114)
+    implementation(libs.androidx.material.icons.extended)
+
 }
